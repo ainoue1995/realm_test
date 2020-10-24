@@ -8,6 +8,7 @@ import DeviceInfo from 'react-native-device-info';
 interface Hoge {
   prop1: number,
   prop2: string,
+  prop3: boolean,
 }
 
 const style = StyleSheet.create({
@@ -23,13 +24,21 @@ const style = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    width: '90%'
+    // width: '90%'
+  },
+  buttonContainer: {
+    // flex: 0,
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    width: '40%'
   },
   listItem: {
     backgroundColor: '#800000',
     borderRadius: 12,
     padding: 6,
-    width: 260,
+    width: 245,
     color: '#FFFFFF'
   }
 });
@@ -99,20 +108,27 @@ const App = () => {
       prop1: 'int',
       // 型と初期値を指定
       prop2: { type: 'string', default: 'hoge' },
+      prop3: { type: 'bool', default: false }
     }
   };
 
   React.useEffect(() => {
     Realm.open({ schema: [HOGE_SCHEMA] }).then((realm: Realm) => {
+      // realm.deleteAll();
       setAllData(realm.objects(HOGE_SCHEMA_NAME).reduce((prev: Hoge[], current: any): Hoge[] => {
         prev.push({
           prop1: current['prop1'],
-          prop2: current['prop2']
+          prop2: current['prop2'],
+          prop3: current['prop3'],
         });
         return prev;
       }, []));
     });
   }, []);
+
+  const getID = () => {
+    return Math.max.apply(null, allData !== undefined ? allData?.map(data => data.prop1) : [0]) + 1;
+  };
 
   const addData = async () => {
 
@@ -134,15 +150,16 @@ const App = () => {
       realm.write(() => {
         realm.create(HOGE_SCHEMA_NAME,
           {
-            prop1: realm.objects(HOGE_SCHEMA_NAME).length + 1,
-            prop2: text
+            prop1: getID(),
+            prop2: text !== '' ? text : 'Hoge',
           });
       });
 
       setAllData(realm.objects(HOGE_SCHEMA_NAME).reduce((prev: Hoge[], current: any): Hoge[] => {
         prev.push({
           prop1: current['prop1'],
-          prop2: current['prop2']
+          prop2: current['prop2'],
+          prop3: current['prop3'],
         });
         return prev;
       }, []));
@@ -163,7 +180,6 @@ const App = () => {
 
 
   const deleteData = async (index: number) => {
-    console.log("deleteData -> index", index);
     const printSystemName = () => {
       // OS 名を出力する
       const systemName = DeviceInfo.getSystemName();
@@ -188,7 +204,8 @@ const App = () => {
       setAllData(realm.objects(HOGE_SCHEMA_NAME).reduce((prev: Hoge[], current: any): Hoge[] => {
         prev.push({
           prop1: current['prop1'],
-          prop2: current['prop2']
+          prop2: current['prop2'],
+          prop3: current['prop3'],
         });
         return prev;
       }, []));
@@ -205,11 +222,55 @@ const App = () => {
     }
   };
 
+  const changeStatus = async (data: Hoge) => {
+    const printSystemName = () => {
+      // OS 名を出力する
+      const systemName = DeviceInfo.getSystemName();
+      console.log(systemName);
+    };
+    printSystemName();
+    console.log('Start changeStatus');
+
+    let realm: Realm;
+
+    try {
+      realm = await Realm.open({
+        schema: [HOGE_SCHEMA],
+      });
+
+      realm.write(() => {
+        // const changeData = realm.objects(HOGE_SCHEMA_NAME).filtered(`prop1 = ${data.prop1}`)[0];
+        realm.create(HOGE_SCHEMA_NAME, { prop1: data.prop1, prop2: data.prop2, prop3: data.prop3 ? false : true }, true);
+      });
+
+      setAllData(realm.objects(HOGE_SCHEMA_NAME).reduce((prev: Hoge[], current: any): Hoge[] => {
+        prev.push({
+          prop1: current['prop1'],
+          prop2: current['prop2'],
+          prop3: current['prop3'],
+        });
+        return prev;
+      }, []));
+
+
+      // console.log("App -> allData", allData);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      // Realm データベースは使用後必ずクローズする
+      // @ts-ignore
+      if (realm !== undefined && !realm.isClosed) {
+        setText('');
+        realm.close();
+      }
+    }
+  };
+
   return (
     <PaperProvider theme={theme}>
       <KeyboardAvoidingView>
         <TextInput
-          label="TestProperty"
+          label="Todo入力"
           value={text}
           onChangeText={setText}
           mode="outlined"
@@ -221,13 +282,16 @@ const App = () => {
       </Button>
         <Divider />
         <List.Section >
-          <List.Subheader>リスト</List.Subheader>
-          {allData ? allData.map((data, index) => {
+          <List.Subheader>一覧</List.Subheader>
+          {allData ? allData.map((data: Hoge, index: number) => {
             // return <View>
-            return <View style={style.container} key={index + 1} >
+            return <View key={index + 1} style={style.container}>
               {/* <List.Item style={style.listItem} key={index + 1} title={`id: ${data.prop1} name: ${data.prop2}`} /> */}
-              <List.Item title={`id: ${data.prop1} name: ${data.prop2}`} titleStyle={style.listItem} />
-              <Button mode="outlined" onPress={() => deleteData(data.prop1)}>削除</Button>
+              <List.Item title={`id: ${data.prop1} title: ${data.prop2}`} titleStyle={style.listItem} />
+              <View style={style.buttonContainer}>
+                <Button mode="outlined" onPress={() => changeStatus(data)}>{data.prop3 ? '完了' : '未'}</Button>
+                <Button mode="outlined" onPress={() => deleteData(data.prop1)}>削除</Button>
+              </View>
             </View>;
           }) : <Text>No data</Text>}
         </List.Section>
