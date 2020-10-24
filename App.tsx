@@ -11,6 +11,12 @@ interface Hoge {
 }
 
 const style = StyleSheet.create({
+  textInput: {
+    padding: 12,
+  },
+  buttonStyle: {
+    marginHorizontal: 12,
+  },
   container: {
     // flex: 0,
     display: 'flex',
@@ -208,8 +214,9 @@ const App = () => {
           onChangeText={setText}
           mode="outlined"
           autoFocus
+          style={style.textInput}
         />
-        <Button mode="contained" onPress={addData}>
+        <Button mode="contained" onPress={addData} style={style.buttonStyle}>
           登録
       </Button>
         <Divider />
